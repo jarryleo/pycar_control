@@ -20,8 +20,10 @@ abstract class BasePage<T extends StatefulWidget, M extends BaseViewModel>
     return ChangeNotifierProvider.value(
       value:viewModel,
       builder:(context,child){
-        return Container();
+        return contentView(context);
       }
     );
   }
+
+  Widget contentView(BuildContext context);
 }

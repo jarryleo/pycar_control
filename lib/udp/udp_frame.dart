@@ -47,7 +47,7 @@ class UdpFrame extends UdpInterface {
     udpSubscriber?.close();
   }
 
-  UdpSender getSender([String? host, int? port]) {
+  static UdpSender getSender([String? host, int? port]) {
     if (port == null) return _udpSender;
     var sender = UdpSenderImpl().setPort(port);
     if (host != null) sender.setRemoteHost(host);
