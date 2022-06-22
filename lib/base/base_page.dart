@@ -18,10 +18,10 @@ abstract class BasePage<T extends StatefulWidget, M extends BaseViewModel>
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
-      value:viewModel,
-      builder:(context,child){
-        return contentView(context);
-      }
+        value: viewModel,
+        builder: (context, child) {
+          return contentView(context);
+        }
     );
   }
 

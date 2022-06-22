@@ -21,6 +21,8 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
 
   bool get lightState => _lightState;
 
+  bool get connectState => _connectState;
+
   /// udp 框架
   final UdpFrame _udpFrame = UdpFrame();
 
@@ -32,11 +34,13 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
 
   CarViewModel() {
     // 遥控器广播自己地址 循环1秒1次
+    var data = utf8.encode("broadcast");
     Future.doWhile(() async {
-      var data = utf8.encode("broadcast");
-      _broadcastSender.send(data);
-      _connectState = DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
       await Future.delayed(const Duration(seconds: 1));
+      _broadcastSender.send(data);
+      _connectState =
+          DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
+      notifyListeners();
       return true;
     });
 
@@ -49,26 +53,28 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
   void onDataArrived(List<int> data, String host) {
     _sender ??= UdpFrame.getSender(host, 27890);
     var text = String.fromCharCodes(data);
-    if (text == "heartbeat"){
+    if (text == "heartbeat") {
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
     }
   }
 
   /// 小车灯光开关切换
   void lightSwitch() {
-    if (_lightState){
+    if (_lightState) {
       lightOff();
-    }else{
+    } else {
       lightOn();
     }
   }
+
   /// 小车灯光开启
-  void lightOn(){
+  void lightOn() {
     _lightState = true;
     _send("light_on");
   }
+
   /// 小车灯光关闭
-  void lightOff(){
+  void lightOff() {
     _lightState = true;
     _send("light_off");
   }

@@ -61,7 +61,7 @@ class UdpSenderImpl extends UdpSender {
 }
 
 class UdpSenderCore {
-  late RawDatagramSocket _datagramSocket;
+  late RawDatagramSocket? _datagramSocket;
   InternetAddress? _address;
 
   UdpSenderCore() {
@@ -83,7 +83,7 @@ class UdpSenderCore {
     } else {
       address = _createAddress(host);
     }
-    _datagramSocket.send(data, address, port);
+    _datagramSocket?.send(data, address, port);
   }
 
   InternetAddress _createAddress(String host) {
