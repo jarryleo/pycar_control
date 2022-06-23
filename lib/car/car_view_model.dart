@@ -33,14 +33,14 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
   final UdpSender _broadcastSender = UdpFrame.getSender(null, 27890);
 
   /// udp 发送器
-  late UdpSender? _sender;
+  UdpSender? _sender;
 
   CarViewModel() {
     // 遥控器广播自己地址 循环1秒1次
     var data = utf8.encode("broadcast");
     //计时器循环发送广播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
-      _broadcastSender.send(data);
+      _broadcastSender.sendBroadcast(data);
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
       notifyListeners();
