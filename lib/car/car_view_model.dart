@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -23,6 +24,8 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
 
   bool get connectState => _connectState;
 
+  int get speed => _speed;
+
   /// udp 框架
   final UdpFrame _udpFrame = UdpFrame();
 
@@ -35,15 +38,13 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
   CarViewModel() {
     // 遥控器广播自己地址 循环1秒1次
     var data = utf8.encode("broadcast");
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
+    //计时器循环发送广播
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
       _broadcastSender.send(data);
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
       notifyListeners();
-      return true;
     });
-
     //订阅小车消息，目前只有小车心跳消息
     _udpFrame.subscribe(17890, this);
   }
@@ -70,21 +71,57 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
   /// 小车灯光开启
   void lightOn() {
     _lightState = true;
+    notifyListeners();
     _send("light_on");
   }
 
   /// 小车灯光关闭
   void lightOff() {
-    _lightState = true;
+    _lightState = false;
+    notifyListeners();
     _send("light_off");
+  }
+
+  ///设置车速
+  void setSpeed(int speed, [bool send = false]) {
+    _speed = speed;
+    notifyListeners();
+    if (send) {
+      _send("speed$speed");
+    }
+  }
+
+  ///前进
+  void forward() {
+    _send("forward");
+  }
+
+  ///后退
+  void backward() {
+    _send("backward");
+  }
+
+  ///左转
+  void turnLeft() {
+    _send("turn_left");
+  }
+
+  ///右转
+  void turnRight() {
+    _send("turn_right");
+  }
+
+  ///停止
+  void stop() {
+    _send("stop");
   }
 
   ///发送指令到小车
   void _send(String text) {
-    var data = utf8.encode(text);
     if (kDebugMode) {
-      print(data);
+      print(text);
     }
+    var data = utf8.encode(text);
     _sender?.send(data);
   }
 }
