@@ -144,10 +144,13 @@ class CarViewModel extends BaseViewModel {
     }
     var data = utf8.encode(text);
     if (_carAddress != null) {
-      _sender?.send(
-          data,
-          Endpoint.unicast(_carAddress,
-              port: const Port(UdpConfig.carListenPort)));
+      //异步发送消息到小车
+      Future.sync(() => (){
+        _sender?.send(
+            data,
+            Endpoint.unicast(_carAddress,
+                port: const Port(UdpConfig.carListenPort)));
+      });
     }
   }
 }
