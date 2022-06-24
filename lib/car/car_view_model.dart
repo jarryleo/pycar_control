@@ -44,7 +44,7 @@ class CarViewModel extends BaseViewModel {
     _sender = await UDP.bind(Endpoint.any());
     //小车消息接收器
     _receiver = await UDP
-        .bind(Endpoint.loopback(port: const Port(UdpConfig.carListenPort)));
+        .bind(Endpoint.loopback(port: const Port(UdpConfig.controlPort)));
     //订阅小车消息，目前只有小车心跳消息
     _receiver
         ?.asStream(timeout: const Duration(seconds: 30))
@@ -64,7 +64,7 @@ class CarViewModel extends BaseViewModel {
     //计时器循环发送广播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
       _sender?.send(
-          data, Endpoint.broadcast(port: const Port(UdpConfig.broadcastPort)));
+          data, Endpoint.broadcast(port: const Port(UdpConfig.carPort)));
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
       notifyListeners();
@@ -149,7 +149,7 @@ class CarViewModel extends BaseViewModel {
         _sender?.send(
             data,
             Endpoint.unicast(_carAddress,
-                port: const Port(UdpConfig.carListenPort)));
+                port: const Port(UdpConfig.carPort)));
       });
     }
   }
