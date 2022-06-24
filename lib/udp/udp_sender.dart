@@ -43,7 +43,7 @@ class UdpSenderImpl extends UdpSender {
 
   @override
   UdpSender sendBroadcast(List<int> data) {
-    _udpSenderCore.sendData(data, _broadcastHost, _port);
+    _udpSenderCore.sendData(data, _broadcastHost, _port, isBroadCast: true);
     return this;
   }
 
@@ -67,7 +67,6 @@ class UdpSenderCore {
   UdpSenderCore() {
     RawDatagramSocket.bind(InternetAddress.anyIPv4, UdpConfig.defaultListenPort)
         .then((udpSocket) {
-      udpSocket.broadcastEnabled = true;
       _datagramSocket = udpSocket;
     });
   }
@@ -76,12 +75,18 @@ class UdpSenderCore {
   /// param [data] 数据
   /// param [host] 目标地址
   /// param [port] 目标端口
-  void sendData(List<int> data, String host, int port) async {
+  void sendData(List<int> data, String host, int port,
+      {bool isBroadCast = false}) async {
     InternetAddress address;
     if (_address?.host == host) {
       address = _address ?? _createAddress(host);
     } else {
       address = _createAddress(host);
+    }
+    //更改广播设置
+    var broadcastEnabled = _datagramSocket?.broadcastEnabled;
+    if(broadcastEnabled != isBroadCast) {
+      _datagramSocket?.broadcastEnabled = isBroadCast;
     }
     _datagramSocket?.send(data, address, port);
   }

@@ -30,7 +30,7 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
   final UdpFrame _udpFrame = UdpFrame();
 
   /// 广播发送器
-  final UdpSender _broadcastSender = UdpFrame.getSender(null, 27890);
+  final UdpSender _broadcastSender = UdpFrame.getSender(port: 27890);
 
   /// udp 发送器
   UdpSender? _sender;
@@ -52,7 +52,7 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
   /// 接收到小车发来的消息
   @override
   void onDataArrived(List<int> data, String host) {
-    _sender ??= UdpFrame.getSender(host, 27890);
+    _sender ??= UdpFrame.getSender(host: host, port: 27890);
     var text = String.fromCharCodes(data);
     if (text == "heartbeat") {
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
