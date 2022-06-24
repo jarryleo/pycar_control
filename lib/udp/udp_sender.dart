@@ -30,7 +30,7 @@ class UdpSenderImpl extends UdpSender {
   String _remoteHost = "127.0.0.1";
 
   ///默认端口
-  int _port = UdpConfig.defaultListenPort;
+  int _port = UdpConfig.defaultPort;
 
   ///udp发送核心
   final UdpSenderCore _udpSenderCore = UdpSenderCore();
@@ -65,7 +65,7 @@ class UdpSenderCore {
   InternetAddress? _address;
 
   UdpSenderCore() {
-    RawDatagramSocket.bind(InternetAddress.anyIPv4, UdpConfig.defaultListenPort)
+    RawDatagramSocket.bind(InternetAddress.anyIPv4, UdpConfig.defaultPort)
         .then((udpSocket) {
       _datagramSocket = udpSocket;
     });

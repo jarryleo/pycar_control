@@ -3,11 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:pycar_control/base/base_view_model.dart';
-import 'package:pycar_control/udp/udp_frame.dart';
-import 'package:pycar_control/udp/udp_interface.dart';
-import 'package:pycar_control/udp/udp_sender.dart';
+import 'package:pycar_control/udp/udp_config.dart';
+import 'package:udp/udp.dart';
 
-class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
+class CarViewModel extends BaseViewModel {
   /// 车辆连接状态
   bool _connectState = false;
 
@@ -26,33 +25,54 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
 
   int get speed => _speed;
 
-  /// udp 框架
-  final UdpFrame _udpFrame = UdpFrame();
-
-  /// 广播发送器
-  final UdpSender _broadcastSender = UdpFrame.getSender(port: 27890);
+  /// udp 广播发送器
+  UDP? _broadcastSender;
 
   /// udp 发送器
-  UdpSender? _sender;
+  UDP? _sender;
+
+  /// udp 接收器
+  UDP? _receiver;
 
   CarViewModel() {
+    init();
+    sendBroadcast();
+  }
+
+  void init() async {
+    //初始化广播发送器，定时发送广播
+    _broadcastSender = await UDP.bind(Endpoint.any());
+    //小车消息接收器
+    _receiver = await UDP
+        .bind(Endpoint.loopback(port: const Port(UdpConfig.carListenPort)));
+    //订阅小车消息，目前只有小车心跳消息
+    _receiver
+        ?.asStream(timeout: const Duration(seconds: 30))
+        .listen((datagram) {
+      if (datagram != null) {
+        onDataArrived(datagram.data, datagram.address.host);
+      }
+    });
+  }
+
+  ///发送广播，告知小车遥控器地址
+  void sendBroadcast() async {
     // 遥控器广播自己地址 循环1秒1次
     var data = utf8.encode("broadcast");
     //计时器循环发送广播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
-      _broadcastSender.sendBroadcast(data);
+      _broadcastSender?.send(
+          data, Endpoint.broadcast(port: const Port(UdpConfig.broadcastPort)));
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
       notifyListeners();
     });
-    //订阅小车消息，目前只有小车心跳消息
-    _udpFrame.subscribe(17890, this);
   }
 
   /// 接收到小车发来的消息
-  @override
-  void onDataArrived(List<int> data, String host) {
-    _sender ??= UdpFrame.getSender(host: host, port: 27890);
+  void onDataArrived(List<int> data, String host) async {
+    //小车收到广播发送心跳到遥控器，遥控器获得小车地址，创建小车消息发送器
+    _sender ??= await UDP.bind(Endpoint.any());
     var text = String.fromCharCodes(data);
     if (text == "heartbeat") {
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
@@ -122,6 +142,7 @@ class CarViewModel extends BaseViewModel implements OnDataArrivedListener {
       print(text);
     }
     var data = utf8.encode(text);
-    _sender?.send(data);
+    _sender?.send(
+        data, Endpoint.any(port: const Port(UdpConfig.carListenPort)));
   }
 }
