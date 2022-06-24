@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:pycar_control/base/base_view_model.dart';
@@ -25,23 +26,22 @@ class CarViewModel extends BaseViewModel {
 
   int get speed => _speed;
 
-  /// udp 广播发送器
-  UDP? _broadcastSender;
-
   /// udp 发送器
   UDP? _sender;
 
   /// udp 接收器
   UDP? _receiver;
 
+  ///小车ip地址
+  InternetAddress? _carAddress;
+
   CarViewModel() {
-    init();
-    sendBroadcast();
+    Future.sync(() => init());
   }
 
   void init() async {
-    //初始化广播发送器，定时发送广播
-    _broadcastSender = await UDP.bind(Endpoint.any());
+    //消息发送器
+    _sender = await UDP.bind(Endpoint.any());
     //小车消息接收器
     _receiver = await UDP
         .bind(Endpoint.loopback(port: const Port(UdpConfig.carListenPort)));
@@ -50,9 +50,11 @@ class CarViewModel extends BaseViewModel {
         ?.asStream(timeout: const Duration(seconds: 30))
         .listen((datagram) {
       if (datagram != null) {
-        onDataArrived(datagram.data, datagram.address.host);
+        onDataArrived(datagram);
       }
     });
+    //发送广播
+    sendBroadcast();
   }
 
   ///发送广播，告知小车遥控器地址
@@ -61,7 +63,7 @@ class CarViewModel extends BaseViewModel {
     var data = utf8.encode("broadcast");
     //计时器循环发送广播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
-      _broadcastSender?.send(
+      _sender?.send(
           data, Endpoint.broadcast(port: const Port(UdpConfig.broadcastPort)));
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
@@ -70,10 +72,9 @@ class CarViewModel extends BaseViewModel {
   }
 
   /// 接收到小车发来的消息
-  void onDataArrived(List<int> data, String host) async {
-    //小车收到广播发送心跳到遥控器，遥控器获得小车地址，创建小车消息发送器
-    _sender ??= await UDP.bind(Endpoint.any());
-    var text = String.fromCharCodes(data);
+  void onDataArrived(Datagram dg) async {
+    _carAddress = dg.address;
+    var text = String.fromCharCodes(dg.data);
     if (text == "heartbeat") {
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
     }
@@ -142,7 +143,11 @@ class CarViewModel extends BaseViewModel {
       print(text);
     }
     var data = utf8.encode(text);
-    _sender?.send(
-        data, Endpoint.any(port: const Port(UdpConfig.carListenPort)));
+    if (_carAddress != null) {
+      _sender?.send(
+          data,
+          Endpoint.unicast(_carAddress,
+              port: const Port(UdpConfig.carListenPort)));
+    }
   }
 }
