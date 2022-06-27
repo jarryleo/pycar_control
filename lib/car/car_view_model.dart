@@ -45,7 +45,7 @@ class CarViewModel extends BaseViewModel {
     //udp
     _udp = await UDP.bind(_multicastEndpoint);
     //订阅小车消息，目前只有小车心跳消息
-    _udp?.asStream(timeout: const Duration(seconds: 30)).listen((datagram) {
+    _udp?.asStream().listen((datagram) {
       if (datagram != null) {
         onDataArrived(datagram);
       }
@@ -62,9 +62,9 @@ class CarViewModel extends BaseViewModel {
     Timer.periodic(const Duration(seconds: 1), (timer) async {
       //发送组播数据
       _udp?.send(data, _multicastEndpoint);
-      //更新连接状态
+      //更新连接状态(1.5秒没有数据表示小车断开连接)
       _connectState =
-          DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
+          DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1500;
       notifyListeners();
     });
   }
@@ -84,6 +84,7 @@ class CarViewModel extends BaseViewModel {
     var text = String.fromCharCodes(dg.data);
     if (kDebugMode) {
       print("onDataArrived:$text");
+      _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
     }
     if (text == "heartbeat") {
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
@@ -159,5 +160,11 @@ class CarViewModel extends BaseViewModel {
           port: const Port(UdpConfig.defaultPort));
       _udp?.send(data, carEndpoint);
     }
+  }
+
+  @override
+  void dispose() {
+    _udp?.close();
+    super.dispose();
   }
 }

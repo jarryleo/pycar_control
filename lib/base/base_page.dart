@@ -26,4 +26,9 @@ abstract class BasePage<T extends StatefulWidget, M extends BaseViewModel>
   }
 
   Widget contentView(BuildContext context);
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 }
