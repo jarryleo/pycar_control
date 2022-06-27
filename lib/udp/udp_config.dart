@@ -8,4 +8,7 @@ class UdpConfig {
 
   /// 遥控器广播端口
   static const int broadcastPort = 17890;
+
+  /// 组播地址
+  static const String multiGroupAddress = "222.2.5.6";
 }

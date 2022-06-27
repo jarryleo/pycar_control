@@ -59,12 +59,17 @@ class CarViewModel extends BaseViewModel {
 
   ///发送广播，告知小车遥控器地址
   void sendBroadcast() async {
-    // 遥控器广播自己地址 循环1秒1次
+    //遥控器广播自己地址 循环1秒1次
     var data = utf8.encode("broadcast");
-    //计时器循环发送广播
+    //组播地址
+    var multicastEndpoint = Endpoint.multicast(
+        InternetAddress(UdpConfig.multiGroupAddress),
+        port: const Port(UdpConfig.broadcastPort));
+    //计时器循环发送组播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
-      _sender?.send(
-          data, Endpoint.broadcast(port: const Port(UdpConfig.broadcastPort)));
+      //发送组播数据
+      _sender?.send(data, multicastEndpoint);
+      //更新连接状态
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
       notifyListeners();
@@ -73,8 +78,20 @@ class CarViewModel extends BaseViewModel {
 
   /// 接收到小车发来的消息
   void onDataArrived(Datagram dg) async {
-    _carAddress = dg.address;
+    _carAddress ??= dg.address;
+    //如果是已经连接，并且新接受的地址不是已连接地址，抛弃数据
+    if (_connectState) {
+      if (_carAddress?.host != dg.address.host) {
+        return;
+      }
+    } else {
+      //如果已断开连接，则接收新的地址数据
+      _carAddress = dg.address;
+    }
     var text = String.fromCharCodes(dg.data);
+    if (kDebugMode) {
+      print("onDataArrived:$text");
+    }
     if (text == "heartbeat") {
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
     }
@@ -145,12 +162,9 @@ class CarViewModel extends BaseViewModel {
     var data = utf8.encode(text);
     if (_carAddress != null) {
       //异步发送消息到小车
-      Future.sync(() => (){
-        _sender?.send(
-            data,
-            Endpoint.unicast(_carAddress,
-                port: const Port(UdpConfig.carListenPort)));
-      });
+      var carEndpoint = Endpoint.unicast(_carAddress,
+          port: const Port(UdpConfig.carListenPort));
+      Future.sync(() => _sender?.send(data, carEndpoint));
     }
   }
 }
