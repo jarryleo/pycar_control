@@ -27,10 +27,7 @@ class CarViewModel extends BaseViewModel {
   int get speed => _speed;
 
   /// udp 发送器
-  UDP? _sender;
-
-  /// udp 接收器
-  UDP? _receiver;
+  UDP? _udp;
 
   ///小车ip地址
   InternetAddress? _carAddress;
@@ -40,15 +37,11 @@ class CarViewModel extends BaseViewModel {
   }
 
   void init() async {
-    //消息发送器
-    _sender = await UDP.bind(Endpoint.any());
-    //小车消息接收器
-    _receiver = await UDP
+    //udp
+    _udp = await UDP
         .bind(Endpoint.loopback(port: const Port(UdpConfig.defaultPort)));
     //订阅小车消息，目前只有小车心跳消息
-    _receiver
-        ?.asStream(timeout: const Duration(seconds: 30))
-        .listen((datagram) {
+    _udp?.asStream(timeout: const Duration(seconds: 30)).listen((datagram) {
       if (datagram != null) {
         onDataArrived(datagram);
       }
@@ -68,7 +61,7 @@ class CarViewModel extends BaseViewModel {
     //计时器循环发送组播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
       //发送组播数据
-      _sender?.send(data, multicastEndpoint);
+      _udp?.send(data, multicastEndpoint);
       //更新连接状态
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
@@ -164,7 +157,7 @@ class CarViewModel extends BaseViewModel {
       //异步发送消息到小车
       var carEndpoint = Endpoint.unicast(_carAddress,
           port: const Port(UdpConfig.defaultPort));
-      Future.sync(() => _sender?.send(data, carEndpoint));
+      Future.sync(() => _udp?.send(data, carEndpoint));
     }
   }
 }
