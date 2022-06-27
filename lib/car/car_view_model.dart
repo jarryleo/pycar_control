@@ -29,6 +29,11 @@ class CarViewModel extends BaseViewModel {
   /// udp 发送器
   UDP? _udp;
 
+  ///组播地址
+  final _multicastEndpoint = Endpoint.multicast(
+      InternetAddress(UdpConfig.multiGroupAddress),
+      port: const Port(UdpConfig.defaultPort));
+
   ///小车ip地址
   InternetAddress? _carAddress;
 
@@ -38,8 +43,7 @@ class CarViewModel extends BaseViewModel {
 
   void init() async {
     //udp
-    _udp = await UDP
-        .bind(Endpoint.loopback(port: const Port(UdpConfig.defaultPort)));
+    _udp = await UDP.bind(_multicastEndpoint);
     //订阅小车消息，目前只有小车心跳消息
     _udp?.asStream(timeout: const Duration(seconds: 30)).listen((datagram) {
       if (datagram != null) {
@@ -54,14 +58,10 @@ class CarViewModel extends BaseViewModel {
   void sendBroadcast() async {
     //遥控器广播自己地址 循环1秒1次
     var data = utf8.encode("broadcast");
-    //组播地址
-    var multicastEndpoint = Endpoint.multicast(
-        InternetAddress(UdpConfig.multiGroupAddress),
-        port: const Port(UdpConfig.defaultPort));
     //计时器循环发送组播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
       //发送组播数据
-      _udp?.send(data, multicastEndpoint);
+      _udp?.send(data, _multicastEndpoint);
       //更新连接状态
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1000;
@@ -154,10 +154,10 @@ class CarViewModel extends BaseViewModel {
     }
     var data = utf8.encode(text);
     if (_carAddress != null) {
-      //异步发送消息到小车
+      //发送消息到小车
       var carEndpoint = Endpoint.unicast(_carAddress,
           port: const Port(UdpConfig.defaultPort));
-      Future.sync(() => _udp?.send(data, carEndpoint));
+      _udp?.send(data, carEndpoint);
     }
   }
 }
