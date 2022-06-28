@@ -7,6 +7,8 @@ import 'package:pycar_control/base/base_view_model.dart';
 import 'package:pycar_control/udp/udp_config.dart';
 import 'package:udp/udp.dart';
 
+import '../widget/car_control.dart';
+
 class CarViewModel extends BaseViewModel {
   /// 车辆连接状态
   bool _connectState = false;
@@ -96,6 +98,27 @@ class CarViewModel extends BaseViewModel {
       if (_distance > 0 && _distance <10 ){
         stop();
       }
+    }
+  }
+
+  ///小车状态改变
+  void changeState(CarState state) {
+    switch (state) {
+      case CarState.idle:
+        stop();
+        break;
+      case CarState.forward:
+        forward();
+        break;
+      case CarState.backward:
+        backward();
+        break;
+      case CarState.turnLeft:
+        turnLeft();
+        break;
+      case CarState.turnRight:
+        turnRight();
+        break;
     }
   }
 

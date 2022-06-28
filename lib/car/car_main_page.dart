@@ -4,6 +4,8 @@ import 'package:pycar_control/base/base_page.dart';
 import 'package:pycar_control/car/car_view_model.dart';
 import 'package:pycar_control/widget/online_state.dart';
 
+import '../widget/car_control.dart';
+
 class MainPage extends StatefulWidget {
   const MainPage({Key? key}) : super(key: key);
 
@@ -18,12 +20,17 @@ class _MainPageState extends BasePage<MainPage, CarViewModel> {
   @override
   Widget contentView(BuildContext context) {
     return Container(
+      color: Colors.white,
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           head(),
-          const Spacer(flex: 2),
-          arrow(),
+          const Spacer(),
+          Car(
+            stateCallback: (CarState state) {
+              viewModel.changeState(state);
+            },
+          ),
           const Spacer(),
         ],
       ),
@@ -60,64 +67,6 @@ class _MainPageState extends BasePage<MainPage, CarViewModel> {
               ),
               onPressed: () => model.lightSwitch());
         })
-      ],
-    );
-  }
-
-  /// 车子方向键
-  Widget arrow() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            IconButton(
-                icon: const Icon(
-                  Icons.arrow_upward,
-                  color: Colors.blue,
-                  size: 30,
-                ),
-                onPressed: () => viewModel.forward()),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.blue,
-                  size: 30,
-                ),
-                onPressed: () => viewModel.turnLeft()),
-            IconButton(
-                icon: const Icon(
-                  Icons.stop,
-                  color: Colors.blue,
-                  size: 30,
-                ),
-                onPressed: () => viewModel.stop()),
-            IconButton(
-                icon: const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.blue,
-                  size: 30,
-                ),
-                onPressed: () => viewModel.turnRight()),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            IconButton(
-                icon: const Icon(
-                  Icons.arrow_downward,
-                  color: Colors.blue,
-                  size: 30,
-                ),
-                onPressed: () => viewModel.backward()),
-          ],
-        ),
       ],
     );
   }
