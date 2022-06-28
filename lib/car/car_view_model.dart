@@ -17,6 +17,9 @@ class CarViewModel extends BaseViewModel {
   /// 车速
   int _speed = 1023;
 
+  ///超声波测距
+  double _distance = 0.0;
+
   /// 上次车辆发送的心跳时间
   int _heartbeatTime = 0;
 
@@ -44,24 +47,20 @@ class CarViewModel extends BaseViewModel {
   void init() async {
     //udp
     _udp = await UDP.bind(_multicastEndpoint);
-    //订阅小车消息，目前只有小车心跳消息
+    //订阅小车消息
     _udp?.asStream().listen((datagram) {
       if (datagram != null) {
         onDataArrived(datagram);
       }
     });
-    //发送广播
-    sendBroadcast();
+    //检测小车连接状态
+    checkCarConnectState();
   }
 
-  ///发送广播，告知小车遥控器地址
-  void sendBroadcast() async {
-    //遥控器广播自己地址 循环1秒1次
-    var data = utf8.encode("broadcast");
+  ///检测小车连接状态
+  void checkCarConnectState() async {
     //计时器循环发送组播
     Timer.periodic(const Duration(seconds: 1), (timer) async {
-      //发送组播数据
-      _udp?.send(data, _multicastEndpoint);
       //更新连接状态(1.5秒没有数据表示小车断开连接)
       _connectState =
           DateTime.now().millisecondsSinceEpoch - _heartbeatTime < 1500;
@@ -86,8 +85,17 @@ class CarViewModel extends BaseViewModel {
       print("onDataArrived:$text");
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
     }
-    if (text == "heartbeat") {
+    if (text.startsWith('car')) {
+      //更新心跳时间
       _heartbeatTime = DateTime.now().millisecondsSinceEpoch;
+      //获取雷达距离
+      var distanceText = text.split(":")[1];
+      _distance = double.parse(distanceText);
+      notifyListeners();
+      //防前方碰撞 前方障碍小于10 cm 小车停止前进
+      if (_distance > 0 && _distance <10 ){
+        stop();
+      }
     }
   }
 
