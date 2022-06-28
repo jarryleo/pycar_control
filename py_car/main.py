@@ -52,7 +52,7 @@ def wifi_connect(ssid, pwd):
 
     if not wlan.isconnected():
         print('Connecting to network...')
-        screen('Connecting wifi', f'ssid:{ssid}')
+        screen('Connecting wifi', 'ssid:'+ ssid)
         wlan.connect(ssid, pwd)
 
         while not wlan.isconnected():
@@ -118,8 +118,8 @@ def recv():
 # 小车组播自身状态
 def send_heartbeat(tim):
     global udp_socket
-    distance = Car.getDistance()
-    send_data = f"car:{distance}"
+    distance = int(Car.getDistance())
+    send_data = "car:" + str(distance)
     udp_socket.sendto(send_data.encode("utf-8"), (multiGroup, port))
 
 
@@ -129,12 +129,12 @@ def start(ssid, pwd):
     if wifi_connect(ssid, pwd):
         # 创建socket UDP 通信,接收组播信息
         udp_socket = usocket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        udp_socket.bind(('', port))  # 小车绑定端口
         # 允许端口复用
         udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        TTL = 2  # 路由中转次数，局域网理论上只需要1次
-        udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, TTL)
-
+        # 小车绑定端口
+        udp_socket.bind(('', port))
+        # 声明该socket为多播类型  socket.IP_MULTICAST_TTL = 10 , usocket 不存在
+        udp_socket.setsockopt(socket.IPPROTO_IP, 10, 255)
         # 开启RTOS定时器，编号为-1,周期200ms，发送心跳任务
         tim = Timer(-1)
         tim.init(period=200, mode=Timer.PERIODIC, callback=send_heartbeat)
