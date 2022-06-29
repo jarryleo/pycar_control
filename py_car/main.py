@@ -29,8 +29,12 @@ KEY2 = Pin(12, Pin.IN, Pin.PULL_UP)
 global udp_socket
 # 小车开启端口
 port = 27890
-# 组播地址
-multiGroup = "239.2.5.6"
+# 广播地址
+broadcast_host = "255.255.255.255"
+# 遥控器地址
+control_host = "255.255.255.255"
+# 指令间隔，收到遥控器指令清零，每次小车发送信息+1，判断多久没收到指令，会重新发送广播
+cmd_interval = 0
 
 
 # 显示屏函数 (4 行文字)
@@ -52,7 +56,7 @@ def wifi_connect(ssid, pwd):
 
     if not wlan.isconnected():
         print('Connecting to network...')
-        screen('Connecting wifi', 'ssid:'+ ssid)
+        screen('Connecting wifi', 'ssid:' + ssid)
         wlan.connect(ssid, pwd)
 
         while not wlan.isconnected():
@@ -85,11 +89,29 @@ def wifi_connect(ssid, pwd):
 
 def recv():
     global udp_socket
+    global control_host
+    global cmd_interval
     print("开始接收数据:")
     while True:
         recv_data = udp_socket.recvfrom(128)
         data = recv_data[0].decode("utf-8")
         print("接收到数据:", data)
+        host = recv_data[1][0]
+        # 如果遥控器地址还没获取到，则设置为发送者
+        if control_host == broadcast_host:
+            control_host = host
+
+        # 如果指令不是存储的遥控器地址发送
+        if control_host != host:
+            # 则判断遥控器是否10秒以上没发指令，是的话，存储新的遥控器地址
+            if cmd_interval > 50:
+                control_host = host
+            else:
+                # 否则抛弃非遥控器所发指令
+                return
+        # 收到遥控器指令，重置计时
+        cmd_interval = 0
+        # 执行车子控制指令
         if data == "light_on":
             Car.light_on()
         elif data == "light_off":
@@ -115,26 +137,35 @@ def recv():
         #     Car.stop()
 
 
-# 小车组播自身状态
+# 小车广播自身状态
 def send_heartbeat(tim):
     global udp_socket
+    global cmd_interval
+    global control_host
     distance = int(Car.getDistance())
     send_data = "car:" + str(distance)
-    udp_socket.sendto(send_data.encode("utf-8"), (multiGroup, port))
+    # 定时发送数据到遥控（未存储遥控则广播，1秒5次）
+    udp_socket.sendto(send_data.encode("utf-8"), (control_host, port))
+    cmd_interval += 1
+    # 10分钟没有遥控器指令，清空存储的遥控器地址
+    if cmd_interval > 600 * 5:
+        control_host = broadcast_host
+        cmd_interval = 0
+    # 如果超过10秒没收到遥控器指令，则重新开始发送广播（1秒1次）（不清空存储的遥控器地址）
+    if cmd_interval > 50 and cmd_interval % 5 == 0 and control_host != broadcast_host:
+        udp_socket.sendto(send_data.encode("utf-8"), (broadcast_host, port))
 
 
 def start(ssid, pwd):
     global udp_socket
     # 判断WIFI是否连接成功
     if wifi_connect(ssid, pwd):
-        # 创建socket UDP 通信,接收组播信息
-        udp_socket = usocket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        # 允许端口复用
-        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # 创建socket UDP 通信
+        udp_socket = usocket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # 设置允许广播协议
+        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # 小车绑定端口
         udp_socket.bind(('', port))
-        # 声明该socket为多播类型  socket.IP_MULTICAST_TTL = 10 , usocket 不存在
-        udp_socket.setsockopt(socket.IPPROTO_IP, 10, 255)
         # 开启RTOS定时器，编号为-1,周期200ms，发送心跳任务
         tim = Timer(-1)
         tim.init(period=200, mode=Timer.PERIODIC, callback=send_heartbeat)
@@ -161,9 +192,8 @@ def fun2(KEY2):
         start('JarryLeo', '77887788')
 
 
-KEY1.irq(fun1, Pin.IRQ_FALLING)  # 定义中断，下降沿触发
-KEY2.irq(fun2, Pin.IRQ_FALLING)  # 定义中断，下降沿触发
+KEY1.irq(fun1, Pin.IRQ_FALLING)  # 定义中断，按下按钮触发
+KEY2.irq(fun2, Pin.IRQ_FALLING)  # 定义中断，按下按钮触发
 
 # 上电显示信息
 info_display()
-

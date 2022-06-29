@@ -31,12 +31,11 @@ class CarViewModel extends BaseViewModel {
 
   int get speed => _speed;
 
-  /// udp 发送器
+  /// udp 对象
   UDP? _udp;
 
-  ///组播地址
-  final _multicastEndpoint = Endpoint.multicast(
-      InternetAddress(UdpConfig.multiGroupAddress),
+  ///接收地址
+  final _endpoint = Endpoint.loopback(
       port: const Port(UdpConfig.defaultPort));
 
   ///小车ip地址
@@ -48,7 +47,7 @@ class CarViewModel extends BaseViewModel {
 
   void init() async {
     //udp
-    _udp = await UDP.bind(_multicastEndpoint);
+    _udp = await UDP.bind(_endpoint);
     //订阅小车消息
     _udp?.asStream().listen((datagram) {
       if (datagram != null) {

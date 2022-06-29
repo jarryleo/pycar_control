@@ -25,8 +25,8 @@ class _CarState extends State<Car> {
   double _angel = 0.0;
 
   //指令回调
-  void _setCarState(CarState state){
-    if(state == _state) return; //去重
+  void _setCarState(CarState state) {
+    if (state == _state) return; //去重
     _state = state;
     widget.stateCallback(_state);
   }
@@ -37,10 +37,10 @@ class _CarState extends State<Car> {
       _offset = offset;
     });
   }
-  
+
   //图片旋转
-  void _rotate(angel){
-    setState((){
+  void _rotate(angel) {
+    setState(() {
       _angel = angel;
     });
   }
@@ -53,30 +53,30 @@ class _CarState extends State<Car> {
       child: Listener(
         onPointerMove: (event) {
           var delta = event.delta;
-          if(delta.distance < 5) return;
+          if (delta.distance < 5) return;
           var direction = delta.direction;
-          if (direction < -pi/4 && direction > -pi* 3/4) {
+          if (direction < -pi / 4 && direction > -pi * 3 / 4) {
             _setCarState(CarState.forward);
             _changeOffset(const Offset(0, -30));
-            _rotate(2*pi);
-          } else if (direction < pi* 3/4 && direction > pi/4) {
+            _rotate(2 * pi);
+          } else if (direction < pi * 3 / 4 && direction > pi / 4) {
             _setCarState(CarState.backward);
             _changeOffset(const Offset(0, 30));
-            _rotate(2*pi);
-          }else if (direction < pi/4 && direction > -pi/4) {
+            _rotate(2 * pi);
+          } else if (direction < pi / 4 && direction > -pi / 4) {
             _setCarState(CarState.turnRight);
-            _rotate(pi/9);
+            _rotate(pi / 9);
             _changeOffset(Offset.zero);
-          }else if (direction < -pi*3/4 || direction > pi * 3/4) {
+          } else if (direction < -pi * 3 / 4 || direction > pi * 3 / 4) {
             _setCarState(CarState.turnLeft);
-            _rotate(-pi/9);
+            _rotate(-pi / 9);
             _changeOffset(Offset.zero);
           }
         },
         onPointerUp: (event) {
           _setCarState(CarState.idle);
           _changeOffset(Offset.zero);
-          _rotate(2*pi);
+          _rotate(2 * pi);
         },
         child: Transform.translate(
           offset: _offset,
