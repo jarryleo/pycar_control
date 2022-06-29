@@ -35,6 +35,8 @@ broadcast_host = "255.255.255.255"
 control_host = "255.255.255.255"
 # 指令间隔，收到遥控器指令清零，每次小车发送信息+1，判断多久没收到指令，会重新发送广播
 cmd_interval = 0
+# wifi 是否连接
+is_wifi_connect = False
 
 
 # 显示屏函数 (4 行文字)
@@ -50,6 +52,7 @@ def screen(line1, line2="", line3="", line4=""):
 
 # WIFI连接函数
 def wifi_connect(ssid, pwd):
+    global is_wifi_connect
     wlan = network.WLAN(network.STA_IF)  # STA模式
     wlan.active(True)  # 激活接口
     start_time = time.time()  # 记录时间做超时判断
@@ -82,6 +85,7 @@ def wifi_connect(ssid, pwd):
                wlan.ifconfig()[0],
                wlan.ifconfig()[1],
                wlan.ifconfig()[2])
+        is_wifi_connect = True
         return True
     else:
         return False
@@ -162,14 +166,11 @@ def start(ssid, pwd):
     if wifi_connect(ssid, pwd):
         # 创建socket UDP 通信
         udp_socket = usocket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # 设置允许广播协议
-        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # 小车绑定端口
         udp_socket.bind(('', port))
         # 开启RTOS定时器，编号为-1,周期200ms，发送心跳任务
         tim = Timer(-1)
         tim.init(period=200, mode=Timer.PERIODIC, callback=send_heartbeat)
-
         recv()  # 死循环接收遥控器消息
 
 
@@ -177,18 +178,18 @@ def info_display():
     screen("01Studio pyCar",
            "choose wifi:",
            " 503   JarryLeo ",
-           "<KEY2      KEY1>")
+           "<KEY1      KEY2>")
 
 
 def fun1(KEY1):
     time.sleep_ms(10)  # 消除抖动
-    if KEY1.value() == 0:  # 确认按键被按下
+    if KEY1.value() == 0 and not is_wifi_connect:  # 确认按键被按下
         start('503', 'call25627')
 
 
 def fun2(KEY2):
     time.sleep_ms(10)  # 消除抖动
-    if KEY2.value() == 0:  # 确认按键被按下
+    if KEY2.value() == 0 and not is_wifi_connect:  # 确认按键被按下
         start('JarryLeo', '77887788')
 
 
